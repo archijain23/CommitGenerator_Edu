@@ -1,0 +1,64 @@
+{
+  "repo_path": "./my-target-repo",
+  "author": {
+    "name": "Your Name",
+    "email": "you@example.com"
+  },
+  "time_window": {
+    "start": "2026-04-25 10:00:00",
+    "end": "2026-04-25 22:00:00",
+    "timezone": "Asia/Kolkata"
+  },
+  "commits": [
+    {
+      "message": "feat: initialize project structure and base files",
+      "files": ["src/main.py", "src/config.py"],
+      "time_override": "2026-04-25 10:15:00"
+    },
+    {
+      "message": "chore: add .gitignore and requirements",
+      "files": [".gitignore", "requirements.txt"]
+    },
+    {
+      "message": "feat: implement core data processing module",
+      "files": ["src/processor.py", "src/main.py"]
+    },
+    {
+      "message": "fix: resolve edge case in data parser",
+      "files": ["src/processor.py"]
+    },
+    {
+      "message": "feat: add utility helper functions",
+      "files": ["src/utils.py", "src/main.py"]
+    },
+    {
+      "message": "test: add unit tests for processor module",
+      "files": ["tests/test_processor.py"]
+    },
+    {
+      "message": "docs: write README with setup and usage guide",
+      "files": ["README.md"],
+      "time_override": "2026-04-25 19:30:00"
+    },
+    {
+      "message": "refactor: clean up imports and optimize main logic",
+      "files": ["src/main.py", "src/utils.py"]
+    },
+    {
+      "message": "fix: handle missing config gracefully",
+      "files": ["src/config.py"]
+    },
+    {
+      "message": "chore: final cleanup and version bump",
+      "files": ["README.md", "requirements.txt"],
+      "time_override": "2026-04-25 21:45:00"
+    }
+  ],
+  "options": {
+    "num_commits": 10,
+    "auto_distribute_time": true,
+    "randomize_file_changes": true,
+    "random_mutation_language": "python",
+    "dry_run": false
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "language": "python",
+  "snippets": [
+    "# Step {step}: Added input validation\ndef validate_input(data):\n    if not data:\n        raise ValueError('Input cannot be empty')\n    return True\n",
+    "# Step {step}: Added logging utility\nimport logging\nlogger = logging.getLogger(__name__)\nlogger.setLevel(logging.DEBUG)\n",
+    "# Step {step}: Added config loader\ndef load_config(path='config.json'):\n    import json\n    with open(path) as f:\n        return json.load(f)\n",
+    "# Step {step}: Added retry decorator\nfrom functools import wraps\ndef retry(times=3):\n    def decorator(func):\n        @wraps(func)\n        def wrapper(*args, **kwargs):\n            for _ in range(times):\n                try:\n                    return func(*args, **kwargs)\n                except Exception:\n                    pass\n        return wrapper\n    return decorator\n",
+    "# Step {step}: Added type hints helper\nfrom typing import Optional, List, Dict\ndef process(items: List[Dict]) -> Optional[List]:\n    return [item for item in items if item]\n",
+    "# Step {step}: Added environment variable reader\nimport os\ndef get_env(key: str, default=None):\n    return os.environ.get(key, default)\n",
+    "# Step {step}: Added simple cache\n_cache = {}\ndef cached_get(key):\n    if key not in _cache:\n        _cache[key] = None\n    return _cache[key]\n",
+    "# Step {step}: Added error handler\nclass AppError(Exception):\n    def __init__(self, message, code=500):\n        self.message = message\n        self.code = code\n        super().__init__(self.message)\n"
+  ]
+}

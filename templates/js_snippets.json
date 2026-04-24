@@ -1,0 +1,11 @@
+{
+  "language": "javascript",
+  "snippets": [
+    "// Step {step}: Added input validator\nconst validateInput = (data) => {\n  if (!data) throw new Error('Input cannot be empty');\n  return true;\n};\n",
+    "// Step {step}: Added async fetcher\nconst fetchData = async (url) => {\n  const res = await fetch(url);\n  if (!res.ok) throw new Error(`HTTP error: ${res.status}`);\n  return res.json();\n};\n",
+    "// Step {step}: Added localStorage helper\nconst storage = {\n  get: (key) => JSON.parse(localStorage.getItem(key)),\n  set: (key, val) => localStorage.setItem(key, JSON.stringify(val)),\n  remove: (key) => localStorage.removeItem(key),\n};\n",
+    "// Step {step}: Added debounce utility\nconst debounce = (fn, delay) => {\n  let timer;\n  return (...args) => {\n    clearTimeout(timer);\n    timer = setTimeout(() => fn(...args), delay);\n  };\n};\n",
+    "// Step {step}: Added deep clone helper\nconst deepClone = (obj) => JSON.parse(JSON.stringify(obj));\n",
+    "// Step {step}: Added event emitter\nclass EventEmitter {\n  constructor() { this.events = {}; }\n  on(event, cb) { (this.events[event] = this.events[event] || []).push(cb); }\n  emit(event, data) { (this.events[event] || []).forEach(cb => cb(data)); }\n}\n"
+  ]
+}
