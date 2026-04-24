@@ -2,13 +2,16 @@
 core/validator.py
 Validates the JSON config file before execution.
 
-FIX Issue 4: time_override values in each commit are now validated
-  for correct datetime format '%Y-%m-%d %H:%M:%S' so the user gets
-  a clear error message instead of a raw ValueError crash at runtime.
+FIXES APPLIED (Round 3):
+  - B7:  Warn and print resolved absolute path when repo_path is relative
+  - B12: Show resolved path so user can confirm correct location
+  - Round 2 Issue 4: time_override format validation per commit
 """
 
+import os
 import pytz
 from datetime import datetime
+from pathlib import Path
 
 REQUIRED_TOP_KEYS = ["repo_path", "author", "time_window", "commits", "options"]
 REQUIRED_AUTHOR_KEYS = ["name", "email"]
@@ -17,7 +20,7 @@ DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 
 def _is_valid_datetime(dt_str: str) -> bool:
-    """Return True if dt_str matches the expected datetime format."""
+    """Return True if dt_str matches expected datetime format."""
     try:
         datetime.strptime(dt_str, DATETIME_FORMAT)
         return True
@@ -26,16 +29,35 @@ def _is_valid_datetime(dt_str: str) -> bool:
 
 
 def validate_config(cfg: dict) -> list:
-    """Validate config dict. Returns list of error strings (empty = valid)."""
+    """
+    Validate config dict.
+    Returns list of error strings (empty list = valid).
+    Warnings are printed directly (not returned as errors).
+    """
     errors = []
+    warnings = []
 
     # Check top-level keys
     for key in REQUIRED_TOP_KEYS:
         if key not in cfg:
             errors.append(f"Missing required top-level key: '{key}'")
-
     if errors:
         return errors
+
+    # FIX B7 + B12: Warn if repo_path is relative, show resolved absolute path
+    repo_path = cfg["repo_path"]
+    resolved = str(Path(repo_path).resolve())
+    if not os.path.isabs(repo_path):
+        warnings.append(
+            f"repo_path '{repo_path}' is relative. "
+            f"It will resolve to: {resolved} "
+            f"(based on your current working directory). "
+            f"Run from the correct directory or use an absolute path."
+        )
+
+    # Print warnings immediately so user sees them before proceeding
+    for w in warnings:
+        print(f"\033[93m[WARN]  {w}\033[0m")
 
     # Validate author
     for key in REQUIRED_AUTHOR_KEYS:
@@ -52,50 +74,51 @@ def validate_config(cfg: dict) -> list:
         try:
             tz = pytz.timezone(tw["timezone"])
         except pytz.UnknownTimeZoneError:
-            errors.append(f"Unknown timezone: '{tw['timezone']}'. Use IANA format e.g. 'Asia/Kolkata'")
+            errors.append(
+                f"Unknown timezone: '{tw['timezone']}'. "
+                f"Use IANA format e.g. 'Asia/Kolkata', 'UTC', 'America/New_York'"
+            )
             return errors
 
         try:
             start_dt = datetime.strptime(tw["start"], DATETIME_FORMAT)
         except ValueError:
-            errors.append(f"Invalid time_window.start format. Use: YYYY-MM-DD HH:MM:SS")
+            errors.append("Invalid time_window.start — use: YYYY-MM-DD HH:MM:SS")
             start_dt = None
 
         try:
             end_dt = datetime.strptime(tw["end"], DATETIME_FORMAT)
         except ValueError:
-            errors.append(f"Invalid time_window.end format. Use: YYYY-MM-DD HH:MM:SS")
+            errors.append("Invalid time_window.end — use: YYYY-MM-DD HH:MM:SS")
             end_dt = None
 
         if start_dt and end_dt and start_dt >= end_dt:
-            errors.append("time_window.start must be before time_window.end")
+            errors.append("time_window.start must be strictly before time_window.end")
 
     # Validate commits list
     if not isinstance(cfg["commits"], list) or len(cfg["commits"]) == 0:
         errors.append("'commits' must be a non-empty list")
     else:
         for i, commit in enumerate(cfg["commits"]):
-            label = f"Commit #{i+1}"
-
+            label = f"Commit #{i + 1}"
             if "message" not in commit:
                 errors.append(f"{label}: missing 'message' field")
-
             if "files" not in commit or not isinstance(commit["files"], list):
                 errors.append(f"{label}: missing or invalid 'files' list")
-
-            # FIX Issue 4: Validate time_override format if present
+            # Validate time_override format if present
             if "time_override" in commit:
                 if not _is_valid_datetime(commit["time_override"]):
                     errors.append(
-                        f"{label}: 'time_override' has invalid format '{commit['time_override']}'. "
-                        f"Use: YYYY-MM-DD HH:MM:SS (e.g. '2026-04-25 14:30:00')"
+                        f"{label}: 'time_override' invalid format '{commit['time_override']}'. "
+                        f"Use: YYYY-MM-DD HH:MM:SS  e.g. '2026-04-25 14:30:00'"
                     )
 
     # Validate options
     opts = cfg.get("options", {})
-    if "num_commits" in opts and not isinstance(opts["num_commits"], int):
-        errors.append("options.num_commits must be an integer")
-    if "num_commits" in opts and opts["num_commits"] < 1:
-        errors.append("options.num_commits must be at least 1")
+    if "num_commits" in opts:
+        if not isinstance(opts["num_commits"], int):
+            errors.append("options.num_commits must be an integer")
+        elif opts["num_commits"] < 1:
+            errors.append("options.num_commits must be at least 1")
 
     return errors

@@ -1,11 +1,12 @@
 """
 core/time_distributor.py
 Distributes commits evenly or randomly across a user-defined time window.
-Converts local timezone times to UTC for GitPython author_date/commit_date params.
+Converts local timezone times to UTC ISO 8601 for GitPython author_date/commit_date.
 
-FIX Issue 1: _to_utc_str now outputs ISO 8601 with 'T' separator ('%Y-%m-%dT%H:%M:%S')
-  - GitPython's index.commit(author_date=...) strictly requires this format
-  - Space-separated format '%Y-%m-%d %H:%M:%S' is unreliable across Git versions
+FIXES APPLIED:
+  - Round 2 Issue 1: ISO 8601 'T' separator in _to_utc_str
+  - B8 [Round 3]: Document that total_seconds=0 edge case is safely caught
+    by validator.py (start >= end check). Do NOT remove validator dependency.
 """
 
 import pytz
@@ -13,7 +14,9 @@ import random
 from datetime import datetime, timedelta
 
 DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
-# ISO 8601 with T separator — required by GitPython author_date/commit_date
+# ISO 8601 with T separator — strictly required by GitPython index.commit(author_date=...)
+# IMPORTANT: Space-separated format works in some Git versions but is unreliable.
+# Do NOT change this format string.
 GIT_DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%S"
 
 
@@ -22,6 +25,9 @@ class TimeDistributor:
         self.tz = pytz.timezone(time_window["timezone"])
         self.start = self._localize(time_window["start"])
         self.end = self._localize(time_window["end"])
+        # B8 NOTE: total_seconds=0 when start==end. This edge case is caught
+        # upstream by validator.py (start >= end raises error). If you ever
+        # remove the validator call in main.py, add a guard here too.
         self.total_seconds = int((self.end - self.start).total_seconds())
 
     def _localize(self, dt_str: str) -> datetime:
@@ -32,7 +38,7 @@ class TimeDistributor:
     def distribute_evenly(self, n: int) -> list:
         """
         Spread n commits evenly across the time window.
-        Returns list of UTC ISO 8601 datetime strings for GitPython.
+        Returns list of UTC ISO 8601 strings for GitPython.
         """
         if n <= 1:
             return [self._to_utc_str(self.start)]
@@ -48,7 +54,7 @@ class TimeDistributor:
     def distribute_random(self, n: int) -> list:
         """
         Place n commits at random points within the time window.
-        Returns sorted list of UTC ISO 8601 datetime strings.
+        Returns sorted list of UTC ISO 8601 strings.
         """
         offsets = sorted(random.randint(0, self.total_seconds) for _ in range(n))
         timestamps = []
@@ -58,14 +64,11 @@ class TimeDistributor:
         return timestamps
 
     def override_time(self, dt_str: str) -> str:
-        """
-        Convert a user-supplied override time (in configured timezone) to UTC ISO 8601 string.
-        """
+        """Convert a user-supplied override time to UTC ISO 8601 string."""
         dt_local = self._localize(dt_str)
         return self._to_utc_str(dt_local)
 
     def _to_utc_str(self, dt: datetime) -> str:
         """Convert timezone-aware datetime to UTC ISO 8601 string for GitPython."""
         dt_utc = dt.astimezone(pytz.utc)
-        # FIX Issue 1: Use T separator — required by GitPython index.commit(author_date=...)
         return dt_utc.strftime(GIT_DATETIME_FORMAT)
