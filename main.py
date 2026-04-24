@@ -5,6 +5,10 @@ CommitGenerator_Edu - CLI Entry Point
 🎓 EDUCATIONAL PURPOSES ONLY
 This tool demonstrates Git commit metadata manipulation for learning
 Git internals. Do not use for deceptive purposes.
+
+FIX Issue 3: Use cfg.setdefault('options', {}) before assigning dry_run
+  - Prevents KeyError crash when 'options' key is missing from JSON
+  - Validator runs AFTER this line so we must guard here too
 """
 
 import click
@@ -19,22 +23,19 @@ log = Logger()
 
 @click.command()
 @click.option(
-    "--config",
-    "-c",
+    "--config", "-c",
     default="config/commits.json",
     help="Path to JSON config file (default: config/commits.json)",
     show_default=True,
 )
 @click.option(
-    "--dry-run",
-    "-d",
+    "--dry-run", "-d",
     is_flag=True,
     default=False,
     help="Preview commits without writing to the repository",
 )
 @click.option(
-    "--verbose",
-    "-v",
+    "--verbose", "-v",
     is_flag=True,
     default=False,
     help="Enable verbose logging output",
@@ -54,18 +55,17 @@ def main(config, dry_run, verbose):
     log.banner()
     log.info(f"Loading config from: {config}")
 
-    # Load config
     cfg = load_json_config(config)
     if cfg is None:
         log.error(f"Failed to load config: {config}")
         sys.exit(1)
 
-    # Override dry_run from CLI flag
+    # FIX Issue 3: Use setdefault so we never KeyError if 'options' is missing
+    # Validator runs next and will catch missing 'options' with a friendly message
     if dry_run:
-        cfg["options"]["dry_run"] = True
+        cfg.setdefault("options", {})["dry_run"] = True
         log.warning("DRY RUN mode enabled — no commits will be written")
 
-    # Validate config
     errors = validate_config(cfg)
     if errors:
         log.error("Config validation failed:")
@@ -75,7 +75,6 @@ def main(config, dry_run, verbose):
 
     log.success("Config validated successfully")
 
-    # Run commit engine
     engine = CommitEngine(cfg, verbose=verbose)
     engine.run()
 

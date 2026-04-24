@@ -2,6 +2,9 @@
 core/file_mutator.py
 Randomly selects files and injects realistic code snippets
 to simulate genuine human development activity per commit.
+
+FIX Issue 6: select_random_files() is now properly used by commit_engine
+  when randomize_file_changes=true and commit has >2 files listed.
 """
 
 import os
@@ -22,7 +25,7 @@ class FileMutator:
         """Load code snippets from templates directory."""
         snippet_file = TEMPLATES_DIR / f"{language}_snippets.json"
         if not snippet_file.exists():
-            return [f"# Auto-generated change at step {{step}}\n"]
+            return ["# Auto-generated change at step {step}\n"]
         with open(snippet_file, "r") as f:
             data = json.load(f)
         return data.get("snippets", [])
@@ -65,5 +68,24 @@ class FileMutator:
         return mutated
 
     def select_random_files(self, all_files: list, k: int = 2) -> list:
-        """Randomly pick k files from a list for this commit."""
+        """
+        FIX Issue 6: Now actually wired up in commit_engine.py.
+        Randomly pick up to k files from the provided list.
+        Used when randomize_file_changes=true to simulate realistic
+        partial-file commits (real humans don't always touch every file).
+        """
+        if not all_files:
+            return []
         return random.sample(all_files, min(k, len(all_files)))
+
+    def write_placeholder(self, step: int) -> str:
+        """
+        FIX Issue 2: Write a placeholder file when commits[] has files=[].
+        Ensures there is always something staged so GitPython never crashes
+        with 'nothing to commit'.
+        Returns the relative path of the placeholder file created.
+        """
+        placeholder_path = self.repo_path / ".edu_log"
+        with open(placeholder_path, "a") as f:
+            f.write(f"commit step {step}\n")
+        return ".edu_log"
